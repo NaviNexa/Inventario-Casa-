@@ -12,7 +12,7 @@
   .chip { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:8px; white-space:nowrap; cursor:pointer; font-size:11.5px; font-weight:600; border:1px solid #2A3E63; background:#182A4D; color:#EDEFF5; }
   .chip.active { background:#D9A62E; color:#0F1B33; border-color:#D9A62E; }
   .icon-btn { width:28px; height:28px; border-radius:6px; background:#182A4D; border:1px solid #2A3E63; color:#EDEFF5; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-  .field { width:100%; background:#182A4D; border:1px solid #2A3E63; border-radius:8px; padding:9px 11px; color:#EDEFF5; font-size:14px; margin-bottom:8px; }
+  .field { width:100%; background:#182A4D; border:1px solid #2A3E63; border-radius:8px; padding:9px 11px; color:#EDEFF5; font-size:16px; margin-bottom:8px; }
   .field::placeholder { color:#7488A8; }
   .btn-accent { padding:10px; border-radius:8px; background:#D9A62E; color:#0F1B33; border:none; font-weight:700; cursor:pointer; }
   .btn-ghost { padding:10px; border-radius:8px; background:transparent; border:1px solid #2A3E63; color:#9FB0C9; cursor:pointer; }
@@ -761,7 +761,7 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
     '<div style="position:relative;margin-bottom:16px;">' +
       '<div style="display:flex;align-items:center;gap:8px;background:'+C.panel+';border:1px solid '+C.line+';border-radius:10px;padding:9px 12px;">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="'+C.creamDim+'" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-        '<input id="searchInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="'+esc(state.query)+'" placeholder="Busca cualquier cosa de la casa…" style="background:transparent;border:none;outline:none;color:'+C.cream+';font-size:14px;flex:1;" />' +
+        '<input id="searchInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="'+esc(state.query)+'" placeholder="Busca cualquier cosa de la casa…" style="background:transparent;border:none;outline:none;color:'+C.cream+';font-size:16px;flex:1;" />' +
         '<button id="searchMic" class="icon-btn" style="background:transparent;border:none;">'+MIC_SVG+'</button>' +
         (state.query ? '<button id="clearSearch" style="background:transparent;border:none;color:'+C.creamDim+';cursor:pointer;">✕</button>' : '') +
       '</div>' +
@@ -1945,6 +1945,8 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
         var item = point.items.find(function(i){ return i.id === b.dataset.id; });
         state.productForm = Object.assign({ nivel: "", stockMinimo: "", notas: "", caducidad: "" }, item);
         render();
+        var pf = document.getElementById("pfName");
+        if (pf) pf.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     });
     document.querySelectorAll(".delBtn").forEach(function(b){
@@ -2097,7 +2099,7 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
           '<input id="pinNew1" type="password" inputmode="numeric" maxlength="6" class="field" placeholder="······" />' +
           '<label class="field-label">Repite el código</label>' +
           '<input id="pinNew2" type="password" inputmode="numeric" maxlength="6" class="field" placeholder="······" />' +
-          '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:'+C.creamDim+';margin:4px 0 10px;"><input type="checkbox" id="pinRemember" checked /> Recordar en este dispositivo</label>' +
+          '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:'+C.creamDim+';margin:4px 0 10px;"><input type="checkbox" id="pinRemember" /> Recordar en este dispositivo</label>' +
           '<div id="pinErr" style="font-size:12px;color:'+C.warn+';min-height:16px;margin-bottom:6px;"></div>' +
           '<div style="display:flex;gap:8px;">' +
             '<button id="pinCancel" class="btn-ghost" style="flex:1;">Cancelar</button>' +
