@@ -603,12 +603,19 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
       rec.lang = "es-ES";
       rec.interimResults = false;
       btn.style.color = C.warn;
+      console.log("[dictado] click, creando reconocimiento…");
+      rec.onstart = function(){ console.log("[dictado] onstart: el micrófono está escuchando de verdad"); };
+      rec.onspeechstart = function(){ console.log("[dictado] onspeechstart: ha detectado que empiezas a hablar"); };
+      rec.onspeechend = function(){ console.log("[dictado] onspeechend: ha detectado que dejaste de hablar"); };
+      rec.onaudiostart = function(){ console.log("[dictado] onaudiostart: capturando audio del micrófono"); };
+      rec.onnomatch = function(){ console.log("[dictado] onnomatch: oyó algo pero no lo entendió"); };
       rec.onresult = function(e){
+        console.log("[dictado] onresult:", e.results[0][0].transcript);
         var text = e.results[0][0].transcript;
         input.value = (input.value ? input.value + " " : "") + text;
         input.dispatchEvent(new Event("input"));
       };
-      rec.onend = function(){ btn.style.color = ""; };
+      rec.onend = function(){ console.log("[dictado] onend: terminó (sin más detalles)"); btn.style.color = ""; };
       rec.onerror = function(e){
         btn.style.color = "";
         console.error("SpeechRecognition error:", e.error, e.message || "");
