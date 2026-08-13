@@ -73,6 +73,16 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
   function esc(s){ var d=document.createElement("div"); d.innerText = s==null?"":s; return d.innerHTML; }
   function cap(s){ if (!s) return s; return s.charAt(0).toUpperCase() + s.slice(1); }
 
+  // ---------- Código de acceso (PIN local) ----------
+  var PIN_KEY = "mapaCasaPinHash";
+  var TRUST_KEY = "mapaCasaTrustedDevice";
+  function hashPin(pin){
+    var h = 0;
+    for (var i=0;i<pin.length;i++){ h = ((h<<5)-h) + pin.charCodeAt(i); h |= 0; }
+    return "h"+h;
+  }
+  function hasPin(){ return !!localStorage.getItem(PIN_KEY); }
+
   // ---------- IndexedDB ----------
   function openDB(){
     return new Promise(function(resolve,reject){
@@ -603,32 +613,13 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
       rec.lang = "es-ES";
       rec.interimResults = false;
       btn.style.color = C.warn;
-      console.log("[dictado] click, creando reconocimiento…");
-      rec.onstart = function(){ console.log("[dictado] onstart: el micrófono está escuchando de verdad"); };
-      rec.onspeechstart = function(){ console.log("[dictado] onspeechstart: ha detectado que empiezas a hablar"); };
-      rec.onspeechend = function(){ console.log("[dictado] onspeechend: ha detectado que dejaste de hablar"); };
-      rec.onaudiostart = function(){ console.log("[dictado] onaudiostart: capturando audio del micrófono"); };
-      rec.onnomatch = function(){ console.log("[dictado] onnomatch: oyó algo pero no lo entendió"); };
       rec.onresult = function(e){
-        console.log("[dictado] onresult:", e.results[0][0].transcript);
         var text = e.results[0][0].transcript;
         input.value = (input.value ? input.value + " " : "") + text;
         input.dispatchEvent(new Event("input"));
       };
-      rec.onend = function(){ console.log("[dictado] onend: terminó (sin más detalles)"); btn.style.color = ""; };
-      rec.onerror = function(e){
-        btn.style.color = "";
-        console.error("SpeechRecognition error:", e.error, e.message || "");
-        var msg = {
-          "not-allowed": "Permiso de micrófono denegado.",
-          "service-not-allowed": "El servicio de dictado de Google está bloqueado (revisa extensiones/red).",
-          "no-speech": "No se detectó voz. Prueba de nuevo.",
-          "audio-capture": "No se encontró ningún micrófono.",
-          "network": "Fallo de red al contactar el servicio de dictado."
-        }[e.error] || ("Error de dictado: " + e.error);
-        if (typeof showToast === "function") showToast(msg);
-        else alert(msg);
-      };
+      rec.onend = function(){ btn.style.color = ""; };
+      rec.onerror = function(){ btn.style.color = ""; };
       rec.start();
     });
   }
@@ -708,6 +699,8 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
               '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Exportar copia de seguridad</button>' +
             '<button id="importBtn" style="width:100%;text-align:left;background:transparent;border:none;color:'+C.cream+';cursor:pointer;padding:8px 8px;font-size:13px;display:flex;align-items:center;gap:8px;border-radius:6px;">' +
               '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M4 19h16"/></svg>Importar copia de seguridad</button>' +
+            '<button id="pinBtn" style="width:100%;text-align:left;background:transparent;border:none;color:'+C.cream+';cursor:pointer;padding:8px 8px;font-size:13px;display:flex;align-items:center;gap:8px;border-radius:6px;">' +
+              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'+(hasPin()?"Cambiar código de acceso":"Poner código de acceso")+'</button>' +
           '</div>'
         ) : '') +
       '</div>' +
@@ -933,6 +926,8 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
     var importBtn = document.getElementById("importBtn");
     var importFile = document.getElementById("importFile");
     if (importBtn) importBtn.addEventListener("click", function(){ state.moreMenuOpen = false; importFile.click(); });
+    var pinBtn = document.getElementById("pinBtn");
+    if (pinBtn) pinBtn.addEventListener("click", function(){ state.moreMenuOpen = false; render(); renderPinSettingsModal(); });
     if (importFile) importFile.addEventListener("change", function(e){
       if (e.target.files[0]) doImportFile(e.target.files[0]);
       e.target.value = "";
@@ -2088,6 +2083,104 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
       '</div>';
   }
 
+  function renderPinSettingsModal(){
+    var has = hasPin();
+    function close(){
+      var el = document.getElementById("backdrop-pinSettings");
+      if (el) el.remove();
+    }
+    function renderCreateForm(title, onSaved){
+      var html = '<div class="modal-backdrop" id="backdrop-pinSettings" style="z-index:70;">' +
+        '<div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;">' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:12px;">'+esc(title)+'</div>' +
+          '<label class="field-label">Código nuevo (mínimo 4 dígitos)</label>' +
+          '<input id="pinNew1" type="password" inputmode="numeric" class="field" placeholder="····" />' +
+          '<label class="field-label">Repite el código</label>' +
+          '<input id="pinNew2" type="password" inputmode="numeric" class="field" placeholder="····" />' +
+          '<div id="pinErr" style="font-size:12px;color:'+C.warn+';min-height:16px;margin-bottom:6px;"></div>' +
+          '<div style="display:flex;gap:8px;">' +
+            '<button id="pinCancel" class="btn-ghost" style="flex:1;">Cancelar</button>' +
+            '<button id="pinSave" class="btn-accent" style="flex:1;">Guardar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+      root.insertAdjacentHTML("beforeend", html);
+      document.getElementById("backdrop-pinSettings").addEventListener("click", close);
+      document.getElementById("pinCancel").addEventListener("click", close);
+      document.getElementById("pinSave").addEventListener("click", function(){
+        var v1 = document.getElementById("pinNew1").value.trim();
+        var v2 = document.getElementById("pinNew2").value.trim();
+        var err = document.getElementById("pinErr");
+        if (v1.length < 4) { err.textContent = "Usa al menos 4 dígitos."; return; }
+        if (v1 !== v2) { err.textContent = "Los códigos no coinciden."; return; }
+        localStorage.setItem(PIN_KEY, hashPin(v1));
+        localStorage.setItem(TRUST_KEY, "1");
+        close();
+        onSaved();
+      });
+    }
+    if (!has) {
+      renderCreateForm("Crear código de acceso", function(){ state.toast = "Código de acceso activado"; render(); setTimeout(function(){ state.toast=null; render(); }, 2600); });
+      return;
+    }
+    var html = '<div class="modal-backdrop" id="backdrop-pinSettings" style="z-index:70;">' +
+      '<div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;">' +
+        '<div style="font-size:14px;font-weight:700;margin-bottom:16px;">Código de acceso</div>' +
+        '<div style="display:flex;flex-direction:column;gap:8px;">' +
+          '<button id="pinChangeBtn" class="btn-accent" style="width:100%;">Cambiar código</button>' +
+          '<button id="pinRemoveBtn" style="width:100%;padding:10px;border-radius:8px;background:#FF2D55;color:#fff;border:none;font-weight:700;cursor:pointer;">Quitar código</button>' +
+          '<button id="pinCancel2" class="btn-ghost" style="width:100%;">Cerrar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    root.insertAdjacentHTML("beforeend", html);
+    document.getElementById("backdrop-pinSettings").addEventListener("click", close);
+    document.getElementById("pinCancel2").addEventListener("click", close);
+    document.getElementById("pinChangeBtn").addEventListener("click", function(){
+      close();
+      renderCreateForm("Cambiar código de acceso", function(){ state.toast = "Código actualizado"; render(); setTimeout(function(){ state.toast=null; render(); }, 2600); });
+    });
+    document.getElementById("pinRemoveBtn").addEventListener("click", function(){
+      close();
+      askConfirm("¿Quitar el código de acceso? Cualquiera que abra la app en este dispositivo podrá entrar directamente.", function(){
+        localStorage.removeItem(PIN_KEY);
+        localStorage.removeItem(TRUST_KEY);
+        state.toast = "Código de acceso desactivado";
+        render();
+        setTimeout(function(){ state.toast=null; render(); }, 2600);
+      }, "Quitar", "#FF2D55");
+    });
+  }
+
+  function renderLockScreen(onUnlock){
+    root.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;">' +
+      '<img src="'+LOGO_B64+'" style="width:60px;height:60px;border-radius:14px;" />' +
+      '<div style="font-size:16px;font-weight:700;color:'+C.cream+';">Mapa de casa</div>' +
+      '<div style="font-size:13px;color:'+C.creamDim+';">Introduce tu código para entrar</div>' +
+      '<input id="lockPinInput" type="password" inputmode="numeric" maxlength="12" class="field" style="max-width:200px;text-align:center;font-size:20px;letter-spacing:4px;" />' +
+      '<div id="lockError" style="font-size:12px;color:'+C.warn+';min-height:16px;"></div>' +
+      '<button id="lockUnlockBtn" class="btn-accent" style="max-width:200px;width:100%;">Entrar</button>' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:'+C.creamDim+';margin-top:4px;"><input type="checkbox" id="lockRemember" checked /> Recordar en este dispositivo</label>' +
+    '</div>';
+    var input = document.getElementById("lockPinInput");
+    var err = document.getElementById("lockError");
+    var remember = document.getElementById("lockRemember");
+    function tryUnlock(){
+      var val = input.value.trim();
+      if (hashPin(val) === localStorage.getItem(PIN_KEY)){
+        if (remember.checked) localStorage.setItem(TRUST_KEY, "1");
+        onUnlock();
+      } else {
+        err.textContent = "Código incorrecto";
+        input.value = "";
+        input.focus();
+      }
+    }
+    document.getElementById("lockUnlockBtn").addEventListener("click", tryUnlock);
+    input.addEventListener("keydown", function(e){ if (e.key === "Enter") tryUnlock(); });
+    input.focus();
+  }
+
   function askConfirm(message, onConfirm, confirmLabel, confirmColor){
     confirmLabel = confirmLabel || "Eliminar";
     confirmColor = confirmColor || "#FF2D55";
@@ -2155,7 +2248,7 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
   });
 
   // ---------- init ----------
-  (async function init(){
+  async function startApp(){
     try {
       var d = await idbGet(DATA_KEY);
       state.data = d || seed();
@@ -2167,6 +2260,15 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
     }
     state.currentZoneId = state.data.zones[0] ? state.data.zones[0].id : null;
     render();
+  }
+
+  (function initGate(){
+    var trusted = localStorage.getItem(TRUST_KEY) === "1";
+    if (hasPin() && !trusted) {
+      renderLockScreen(startApp);
+    } else {
+      startApp();
+    }
   })();
 })();
 </script>
