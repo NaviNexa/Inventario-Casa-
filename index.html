@@ -2093,10 +2093,11 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
       var html = '<div class="modal-backdrop" id="backdrop-pinSettings" style="z-index:70;">' +
         '<div class="modal-sheet" onclick="event.stopPropagation()" style="max-width:360px;">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:12px;">'+esc(title)+'</div>' +
-          '<label class="field-label">Código nuevo (mínimo 4 dígitos)</label>' +
-          '<input id="pinNew1" type="password" inputmode="numeric" class="field" placeholder="····" />' +
+          '<label class="field-label">Código nuevo (6 dígitos)</label>' +
+          '<input id="pinNew1" type="password" inputmode="numeric" maxlength="6" class="field" placeholder="······" />' +
           '<label class="field-label">Repite el código</label>' +
-          '<input id="pinNew2" type="password" inputmode="numeric" class="field" placeholder="····" />' +
+          '<input id="pinNew2" type="password" inputmode="numeric" maxlength="6" class="field" placeholder="······" />' +
+          '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:'+C.creamDim+';margin:4px 0 10px;"><input type="checkbox" id="pinRemember" checked /> Recordar en este dispositivo</label>' +
           '<div id="pinErr" style="font-size:12px;color:'+C.warn+';min-height:16px;margin-bottom:6px;"></div>' +
           '<div style="display:flex;gap:8px;">' +
             '<button id="pinCancel" class="btn-ghost" style="flex:1;">Cancelar</button>' +
@@ -2111,10 +2112,14 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
         var v1 = document.getElementById("pinNew1").value.trim();
         var v2 = document.getElementById("pinNew2").value.trim();
         var err = document.getElementById("pinErr");
-        if (v1.length < 4) { err.textContent = "Usa al menos 4 dígitos."; return; }
+        if (v1.length !== 6) { err.textContent = "El código debe tener 6 dígitos."; return; }
         if (v1 !== v2) { err.textContent = "Los códigos no coinciden."; return; }
         localStorage.setItem(PIN_KEY, hashPin(v1));
-        localStorage.setItem(TRUST_KEY, "1");
+        if (document.getElementById("pinRemember").checked) {
+          localStorage.setItem(TRUST_KEY, "1");
+        } else {
+          localStorage.removeItem(TRUST_KEY);
+        }
         close();
         onSaved();
       });
@@ -2157,7 +2162,7 @@ var LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAACtCAYAAABWbA
       '<img src="'+LOGO_B64+'" style="width:60px;height:60px;border-radius:14px;" />' +
       '<div style="font-size:16px;font-weight:700;color:'+C.cream+';">Mapa de casa</div>' +
       '<div style="font-size:13px;color:'+C.creamDim+';">Introduce tu código para entrar</div>' +
-      '<input id="lockPinInput" type="password" inputmode="numeric" maxlength="12" class="field" style="max-width:200px;text-align:center;font-size:20px;letter-spacing:4px;" />' +
+      '<input id="lockPinInput" type="password" inputmode="numeric" maxlength="6" class="field" style="max-width:200px;text-align:center;font-size:20px;letter-spacing:4px;" />' +
       '<div id="lockError" style="font-size:12px;color:'+C.warn+';min-height:16px;"></div>' +
       '<button id="lockUnlockBtn" class="btn-accent" style="max-width:200px;width:100%;">Entrar</button>' +
       '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:'+C.creamDim+';margin-top:4px;"><input type="checkbox" id="lockRemember" checked /> Recordar en este dispositivo</label>' +
